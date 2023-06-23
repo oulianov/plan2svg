@@ -4,6 +4,10 @@ import keras_ocr
 import math
 import numpy as np
 
+import matplotlib.pyplot as plt
+
+from skimage.measure import find_contours, approximate_polygon, subdivide_polygon
+
 
 def midpoint(x1, y1, x2, y2):
     x_mid = int((x1 + x2) / 2)
@@ -37,7 +41,7 @@ def inpaint_text(img_path, pipeline):
     return img
 
 
-def find_contours():
+def find_contours_local():
     mor_img = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, (3, 3), iterations=3)
     # mor_img = 255 - mor_img
 
@@ -109,6 +113,34 @@ def find_contours_2():
     cv2.waitKey(0)
 
 
+def find_lines_local():
+    low_t = 50
+    high_t = 150
+    edges = cv2.Canny(tresh, low_t, high_t)
+    cv2.imshow("edges", edges)
+
+    rho = 3
+    theta = np.pi / 180
+    threshold = 15
+    min_line_len = 60
+    max_line_gap = 60
+    lines = cv2.HoughLinesP(
+        edges,
+        rho,
+        theta,
+        threshold,
+        np.array([]),
+        minLineLength=min_line_len,
+        maxLineGap=max_line_gap,
+    )
+
+    # Draw the lines
+    if lines is not None:
+        for i in range(0, len(lines)):
+            l = lines[i][0]
+            cv2.line(img, (l[0], l[1]), (l[2], l[3]), (0, 0, 255), 3, cv2.LINE_AA)
+
+
 # Remove text
 img = inpaint_text("./zz.jpg", pipeline)
 
@@ -116,38 +148,22 @@ gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
 kernel_size = 5
 blur = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
-cv2.imshow("blur", blur)
 
 # Grayscale and Black and white
-_, thresh = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY)
+_, thresh = cv2.threshold(blur, 160, 255, cv2.THRESH_BINARY)
 # erode to remove small lines
 tresh = cv2.erode(thresh, np.ones((5, 5), np.uint8), iterations=2)
 
-low_t = 50
-high_t = 150
-edges = cv2.Canny(tresh, low_t, high_t)
-cv2.imshow("edges", edges)
 
-rho = 3
-theta = np.pi / 180
-threshold = 15
-min_line_len = 60
-max_line_gap = 60
-lines = cv2.HoughLinesP(
-    edges,
-    rho,
-    theta,
-    threshold,
-    np.array([]),
-    minLineLength=min_line_len,
-    maxLineGap=max_line_gap,
-)
+fig, ax = plt.subplots(ncols=1, figsize=(9, 9))
 
-# Draw the lines
-if lines is not None:
-    for i in range(0, len(lines)):
-        l = lines[i][0]
-        cv2.line(img, (l[0], l[1]), (l[2], l[3]), (0, 0, 255), 3, cv2.LINE_AA)
+for contour in find_contours(tresh, 0):
+    # coords = approximate_polygon(contour, tolerance=2.5)
+    # ax.plot(coords[:, 1], coords[:, 0], "-r", linewidth=2)
+    coords2 = approximate_polygon(contour, tolerance=10)
+    ax.plot(coords2[:, 1], coords2[:, 0], "-g", linewidth=2)
+    print("Number of coordinates:", len(coords2))
 
-cv2.imshow("result", img)
-cv2.waitKey(0)
+# ax.axis((0, 800, 0, 800))
+
+plt.show()
