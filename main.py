@@ -37,15 +37,16 @@ def inpaint_text(img_path, pipeline):
     return img
 
 
-img = inpaint_text("./zz2.png", pipeline)
+# Remove text
+img = inpaint_text("./zz.jpg", pipeline)
+# Grayscale and Black and white
 gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
 _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
 
 cv2.imshow("thresh", thresh)
 
 mor_img = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, (3, 3), iterations=3)
-mor_img = 255 - mor_img
+# mor_img = 255 - mor_img
 
 contours, hierarchy = cv2.findContours(mor_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 # contours = np.vstack(contours)
