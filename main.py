@@ -23,6 +23,7 @@ def inpaint_text(img_path, pipeline):
     img = keras_ocr.tools.read(img_path)
     # generate (word, box) tuples
     prediction_groups = pipeline.recognize([img])
+
     mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in prediction_groups[0]:
         x0, y0 = box[1][0]
@@ -135,14 +136,34 @@ def find_lines_local():
     )
 
     # Draw the lines
+    img_2 = img.copy()
     if lines is not None:
         for i in range(0, len(lines)):
             l = lines[i][0]
-            cv2.line(img, (l[0], l[1]), (l[2], l[3]), (0, 0, 255), 3, cv2.LINE_AA)
+            cv2.line(img_2, (l[0], l[1]), (l[2], l[3]), (0, 0, 255), 3, cv2.LINE_AA)
+
+    cv2.imshow("HLP", img)
+
+    # Create default parametrization LSD
+    lsd = cv2.createLineSegmentDetector(0)
+
+    # Detect lines in the image
+    lines = lsd.detect(tresh)[
+        0
+    ]  # Position 0 of the returned tuple are the detected lines
+
+    # Draw detected lines in the image
+    drawn_img = lsd.drawSegments(img, lines)
+
+    # Show image
+    cv2.imshow("LSD", drawn_img)
+    cv2.waitKey(0)
 
 
 # Remove text
-img = inpaint_text("./zz.jpg", pipeline)
+# img = inpaint_text("./zz.jpg", pipeline)
+img = inpaint_text("./zz2.png", pipeline)
+
 
 gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
@@ -150,20 +171,24 @@ kernel_size = 5
 blur = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
 
 # Grayscale and Black and white
-_, thresh = cv2.threshold(blur, 160, 255, cv2.THRESH_BINARY)
+
+_, thresh = cv2.threshold(blur, 30, 255, cv2.THRESH_BINARY)
 # erode to remove small lines
 tresh = cv2.erode(thresh, np.ones((5, 5), np.uint8), iterations=2)
 
 
-fig, ax = plt.subplots(ncols=1, figsize=(9, 9))
+find_lines_local()
 
-for contour in find_contours(tresh, 0):
-    # coords = approximate_polygon(contour, tolerance=2.5)
-    # ax.plot(coords[:, 1], coords[:, 0], "-r", linewidth=2)
-    coords2 = approximate_polygon(contour, tolerance=10)
-    ax.plot(coords2[:, 1], coords2[:, 0], "-g", linewidth=2)
-    print("Number of coordinates:", len(coords2))
+
+# fig, ax = plt.subplots(ncols=1, figsize=(9, 9))
+
+# for contour in find_contours(tresh, 0):
+#     # coords = approximate_polygon(contour, tolerance=2.5)
+#     # ax.plot(coords[:, 1], coords[:, 0], "-r", linewidth=2)
+#     coords2 = approximate_polygon(contour, tolerance=10)
+#     ax.plot(coords2[:, 1], coords2[:, 0], "-g", linewidth=2)
+#     print("Number of coordinates:", len(coords2))
 
 # ax.axis((0, 800, 0, 800))
 
-plt.show()
+# plt.show()
